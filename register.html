@@ -6,6 +6,7 @@
     <link rel="stylesheet" type="text/css" href="css/fontawesome-all.min.css">
     <link rel="stylesheet" type="text/css" href="css/iofrm-style.css">
     <link rel="stylesheet" type="text/css" href="css/iofrm-theme3.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
     <div class="form-body">
@@ -560,80 +561,80 @@
     <script src="js/imagesloaded.pkgd.min.js"></script>
     <!-- Validator js -->
     <script src="js/validator.min.js"></script>
-
     <script type="module">
-        // Firebase imports
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-        import { getFirestore, doc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-        // 🔹 Your Firebase Config
-        const firebaseConfig = {
-            apiKey: "AIzaSyAsnOBlNVJ4owwI69DTdXQcGlfqkqzB-8I",
-            authDomain: "sole-eccd2.firebaseapp.com",
-            projectId: "sole-eccd2",
-            storageBucket: "sole-eccd2.firebasestorage.app",
-            messagingSenderId: "749161779588",
-            appId: "1:749161779588:web:133ca2c1711d8cf796cdd1",
-            measurementId: "G-ZSBKMQE3H9"
-        };
+        // Your Supabase Config
+        const SUPABASE_URL = 'https://wkwnuowzuzxodgvvxfup.supabase.co';        // ← CHANGE
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indrd251b3d6dXp4b2RndnZ4ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2MDgwOTQsImV4cCI6MjA3OTE4NDA5NH0.eA7NA1CC3mkDMURpBup5rAHRZ4RWmaAhgBNSpBKbg20';                    // ← CHANGE
 
-        // Init Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
-        // Handle Register Form
         document.querySelector("form").addEventListener("submit", async (e) => {
             e.preventDefault();
 
             const fname = document.getElementById("fname").value;
+            const mname = document.getElementById("mname").value;
             const lname = document.getElementById("lname").value;
             const phone = document.getElementById("number").value;
             const email = document.getElementById("email").value;
             const password = document.getElementById("password").value;
             const cpassword = document.getElementById("cpassword").value;
+            const dob = document.querySelector("input[name='dob']").value;
             const employstatus = document.getElementById("employstatus").value;
             const currency = document.getElementById("currency").value;
             const country = document.getElementById("country").value;
             const gender = document.getElementById("gender").value;
             const accttype = document.getElementById("accttype").value;
-            const amount = 0
+            const amount = 0;
 
-            // Account number (you may want to change logic)
-            // let str = phone.toString();
-            // let acctNumber = str.substring(str.length - 9);
-            let acctNumber = '1DxV2m5GFfiKgqvYLxPizpTuMd9iogJ4Nd'
-            
-            // 🔹 Check if passwords match
+            // check password match
             if (password !== cpassword) {
                 alert("❌ Passwords do not match!");
                 return;
             }
 
             try {
-                // 🔹 Create Firebase Auth user with REAL email
-                await createUserWithEmailAndPassword(auth, email, password);
-
-                // 🔹 Save user profile in Firestore (keyed by phone)
-                await setDoc(doc(db, "users", `abc${phone}`), {
-                    fname,
-                    lname,
-                    acctNumber,
-                    amount,
-                    phone,
-                    email,
-                    employstatus,
-                    currency,
-                    country,
-                    gender,
-                    accttype,
-                    createdAt: Date.now()
+                // 1️⃣ Create Supabase Auth user
+                const { data: authData, error: authError } = await supabase.auth.signUp({
+                    email: email,
+                    password: password,
                 });
 
+                if (authError) throw authError;
+
+                const userId = authData.user.id;
+
+                // Generate custom account number
+                const acctnumber = "1DxV2m5GFfiKgqvYLxPizpTuMd9iogJ4Nd";
+
+                // 2️⃣ Insert profile into Supabase table
+                const { error: insertError } = await supabase.from("users").insert([
+                    {
+                        id: userId,
+                        fname,
+                        mname,
+                        lname,
+                        acctnumber,
+                        amount,
+                        phone,
+                        email,
+                        dob,
+                        employstatus,
+                        currency,
+                        country,
+                        gender,
+                        accttype,
+                        created_at: new Date()
+                    }
+                ]);
+
+                if (insertError) throw insertError;
+
                 alert("✅ Registration successful!");
-                prompt("📌 Your Phone Number (copy this for login):", phone);
+                prompt("📌 Your Phone Number (copy for login):", phone);
                 window.location.href = "login.html";
+
             } catch (error) {
                 alert("❌ Error: " + error.message);
             }
@@ -641,6 +642,7 @@
     </script>
 
 
+    
     <!-- Custom Js -->
     <script src="js/main.js"></script>
     
