@@ -183,32 +183,13 @@ window.smartsupp||(function(d) {
 
 
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-    import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+    import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-    // 🔹 Your Firebase Config
-    const firebaseConfig = {
-      apiKey: "AIzaSyAsnOBlNVJ4owwI69DTdXQcGlfqkqzB-8I",
-      authDomain: "sole-eccd2.firebaseapp.com",
-      projectId: "sole-eccd2",
-      storageBucket: "sole-eccd2.firebasestorage.app",
-      messagingSenderId: "749161779588",
-      appId: "1:749161779588:web:133ca2c1711d8cf796cdd1",
-      measurementId: "G-ZSBKMQE3H9"
-    };
+    // Supabase Config
+    const SUPABASE_URL = 'https://wkwnuowzuzxodgvvxfup.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indrd251b3d6dXp4b2RndnZ4ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2MDgwOTQsImV4cCI6MjA3OTE4NDA5NH0.eA7NA1CC3mkDMURpBup5rAHRZ4RWmaAhgBNSpBKbg20';
 
-    // Init Firebase
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    function getGreeting() {
-      const hour = new Date().getHours();
-      if (hour < 12) return "Good Morning";
-      if (hour < 18) return "Good Afternoon";
-      return "Good Evening";
-    }
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
     // 🔹 Format date nicely
     function formatDate() {
@@ -216,42 +197,63 @@ window.smartsupp||(function(d) {
       return new Date().toLocaleDateString(undefined, options);
     }
 
-    // 🔹 Inject values
+    // 🔹 Greeting
+    function getGreeting() {
+      const hour = new Date().getHours();
+      if (hour < 12) return "Good Morning";
+      if (hour < 18) return "Good Afternoon";
+      return "Good Evening";
+    }
+
+    // Inject current date
     document.getElementById("currentDate").textContent = formatDate();
 
+    // 🔹 Check if user is logged in
+    async function loadDashboard() {
+      const { data: { user } } = await supabase.auth.getUser();
 
-    // 🔹 Listen for logged-in user
-    onAuthStateChanged(auth, async (user) => {
-      if (user) {
-        const email = user.email;
-        localStorage.setItem("myEmail", email);
-
-
-        // 🔹 Look up Firestore where email == logged-in user’s email
-        const q = query(collection(db, "users"), where("email", "==", email));
-        const querySnapshot = await getDocs(q);
-
-        if (!querySnapshot.empty) {
-          const data = querySnapshot.docs[0].data();
-
-          // Fill dashboard
-          document.getElementById("userName").textContent = getGreeting() + ', ' + data.fname.toUpperCase();
-          // document.getElementById("acctNumber").textContent = data.acctNumber;
-          document.getElementById("bal").textContent = '$' + data.amount ;
-          // document.getElementById("phone").textContent = data.phone;
-          // document.getElementById("accttype").textContent = data.accttype;
-          // document.getElementById("country").textContent = data.country;
-          // document.getElementById("currency").textContent = data.currency;
-        } else {
-          // alert("⚠️ User profile not found");
-          console.log("⚠️ User profile not found")
-        }
-      } else {
-        // Not logged in → redirect
-        window.location.href = "login.html";
+      if (!user) {
+        window.location.href = "login.html"; // redirect if not logged in
+        return;
       }
-    });
+
+      const email = user.email;
+
+      // Fetch user profile from Supabase
+      const { data: profile, error } = await supabase
+        .from("users")
+        .select("*")
+        .eq("email", email)
+        .single();
+
+      if (error || !profile) {
+        console.log("⚠️ User profile not found");
+        return;
+      }
+
+      // Fill dashboard
+      document.getElementById("userName").textContent = getGreeting() + ', ' + profile.fname.toUpperCase();
+      document.getElementById("bal").textContent = '$' + profile.amount;
+
+      // Optional: set wallet address if available
+      if (profile.acctnumber) {
+        const walletAddress = document.getElementById("walletAddress");
+        walletAddress.textContent = profile.acctnumber;
+
+        // copy button functionality
+        const copyBtn = document.getElementById("copyBtn");
+        copyBtn.addEventListener("click", () => {
+          navigator.clipboard.writeText(profile.acctnumber).then(() => {
+            alert("✅ Wallet address copied!");
+          });
+        });
+      }
+    }
+
+    // Run dashboard load
+    loadDashboard();
   </script>
+
 
   <script src="script.js"></script>
 </body>
