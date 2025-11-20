@@ -177,25 +177,13 @@ window.smartsupp||(function(d) {
 
 
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+        import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-        // Firebase Config
-        const firebaseConfig = {
-            apiKey: "AIzaSyAsnOBlNVJ4owwI69DTdXQcGlfqkqzB-8I",
-            authDomain: "sole-eccd2.firebaseapp.com",
-            projectId: "sole-eccd2",
-            storageBucket: "sole-eccd2.firebasestorage.app",
-            messagingSenderId: "749161779588",
-            appId: "1:749161779588:web:133ca2c1711d8cf796cdd1",
-            measurementId: "G-ZSBKMQE3H9"
-        };
+        // Supabase Config
+        const SUPABASE_URL = 'https://wkwnuowzuzxodgvvxfup.supabase.co';
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indrd251b3d6dXp4b2RndnZ4ZnVwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM2MDgwOTQsImV4cCI6MjA3OTE4NDA5NH0.eA7NA1CC3mkDMURpBup5rAHRZ4RWmaAhgBNSpBKbg20';
 
-        // Init Firebase
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
         // 🔹 Toggle between forms
         const phoneBtn = document.getElementById("phoneLoginBtn");
@@ -221,26 +209,37 @@ window.smartsupp||(function(d) {
             phoneBtn.classList.add("btn-outline-primary");
         });
 
-        // 🔹 Phone login
+        // 🔹 Phone login (using acctNumber)
         phoneForm.addEventListener("submit", async (e) => {
             e.preventDefault();
             const acctNumber = document.getElementById("acctNumber").value;
             const password = document.getElementById("passwordPhone").value;
 
             try {
-            const snap = await getDoc(doc(db, "users", `abc${acctNumber}`));
-            if (!snap.exists()) {
-                alert("❌ Phone number not registered!");
-                return;
-            }
+                // Look up the user by account number
+                let { data: userData, error } = await supabase
+                    .from("users")
+                    .select("id, email")
+                    .eq("phone", acctNumber)
+                    .single();
 
-            const email = snap.data().email;
-            await signInWithEmailAndPassword(auth, email, password);
+                if (error || !userData) {
+                    alert("❌ Account number not registered!");
+                    return;
+                }
 
-            alert("✅ Login successful!");
-            window.location.href = "dashboard.html";
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email: userData.email,
+                    password
+                });
+
+                if (signInError) throw signInError;
+
+                alert("✅ Login successful!");
+                window.location.href = "dashboard.html";
+
             } catch (error) {
-            alert("❌ Error signing in try sign in with the email");
+                alert("❌ Error signing in. Try email login. " + error.message);
             }
         });
 
@@ -251,15 +250,23 @@ window.smartsupp||(function(d) {
             const password = document.getElementById("passwordEmail").value;
 
             try {
-            await signInWithEmailAndPassword(auth, email, password);
+                const { error: signInError } = await supabase.auth.signInWithPassword({
+                    email,
+                    password
+                });
 
-            alert("✅ Login successful!");
-            window.location.href = "dashboard.html";
+                if (signInError) throw signInError;
+
+                alert("✅ Login successful!");
+                window.location.href = "dashboard.html";
+
             } catch (error) {
-            alert("❌ Error signing in");
+                alert("❌ Error signing in: " + error.message);
             }
         });
-    </script>
+        </script>
+
+
 
 
 
